@@ -20,11 +20,12 @@ module OmniAuth
       def callback_phase
         self.env['omniauth.auth'] = auth_hash
         self.env['omniauth.origin'] = '/' + request.params['slug']
+        self.env['omniauth.redirect_url'] = request.params['redirect_url'].presence if restore_session?
         call_app!
       end
 
       def auth_hash
-        hash = AuthHash.new(provider: name, uid: uid)
+        hash = AuthHash.new(provider: name, uid: uid, restore_session: restore_session?)
         hash.info = info
         hash
       end
@@ -36,11 +37,15 @@ module OmniAuth
           last_name: request.params['last_name'],
           email: request.params['email'],
           username: request.params['username'],
-          access_codes: request.params['access_codes'],
+          access_codes: request.params['access_codes']
         }
       end
 
       private
+
+      def restore_session?
+        request.params['restore_session'].present?
+      end
 
       def login_page_url
         options.client_options.login_page_url
