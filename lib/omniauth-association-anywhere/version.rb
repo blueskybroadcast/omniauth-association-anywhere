@@ -1,5 +1,5 @@
 module Omniauth
   module AssociationAnywhere
-    VERSION = "0.2"
+    VERSION = "0.3".freeze
   end
 end

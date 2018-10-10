@@ -15,14 +15,14 @@ module OmniAuth
       info { raw_user_info }
 
       def request_phase
-        slug = session['omniauth.params']['origin'].gsub(/\//, '')
-        redirect login_page_url + '?redirectURL=' + callback_url + "?slug=#{slug}"
+        redirect login_page_url
       end
 
       def callback_phase
         slug = request.params['slug']
-        account = Account.find_by(slug: slug)
-        @app_event = account.app_events.where(id: options.app_options.app_event_id).first_or_create(activity_type: 'sso')
+        @auth_token = request.params['p_aa_token']
+        @account = Account.find_by(slug: slug)
+        @app_event = @account.app_events.where(id: options.app_options.app_event_id).first_or_create(activity_type: 'sso')
 
         self.env['omniauth.auth'] = auth_hash
         self.env['omniauth.origin'] = '/' + slug
@@ -38,6 +38,21 @@ module OmniAuth
       end
 
       def raw_user_info
+        user_info = @auth_token.present? ? auth_service.authenticate_and_get_user_data : user_info_from_params
+        return {} unless user_info
+        {
+          uid: user_info[:uid],
+          first_name: user_info[:first_name],
+          last_name: user_info[:last_name],
+          email: user_info[:email],
+          username: user_info[:username],
+          access_codes: user_info[:access_codes]
+        }
+      end
+
+      private
+
+      def user_info_from_params
         {
           uid: request.params['uid'],
           first_name: request.params['first_name'],
@@ -48,7 +63,9 @@ module OmniAuth
         }
       end
 
-      private
+      def auth_service
+        @auth_service ||= Integrations::AssociationAnywhere::Login.new(@account, { app_event_id: @app_event, auth_token: @auth_token })
+      end
 
       def restore_session?
         request.params['restore_session'].present?
