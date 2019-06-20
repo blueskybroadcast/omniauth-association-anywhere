@@ -26,7 +26,11 @@ module OmniAuth
 
         self.env['omniauth.auth'] = auth_hash
         self.env['omniauth.origin'] = '/' + slug
-        self.env['omniauth.redirect_url'] = request.params['redirect_url'].presence if restore_session?
+        self.env['omniauth.redirect_url'] = if restore_session?
+                                              request.params['redirect_url'].presence
+                                            else
+                                              request.params['redirectURL'].presence
+                                            end
         self.env['omniauth.app_event_id'] = @app_event.id
         call_app!
       end
